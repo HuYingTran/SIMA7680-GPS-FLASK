@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theo dõi GPS</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+    <style>
+        #map {
+            height: 500px;
+            width: 100%;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            margin-top: 20px;
+        }
+        table {
+            width: 90%;
+            margin: 20px auto;
+            border-collapse: collapse;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #00ccff;
+            color: white;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        .filter-form {
+            text-align: center;
+            margin-top: 20px;
+            justify-content: center;
+            display: flex;
+            width: 100%;
+        }
+        .filter-form h3 {
+            margin-bottom: 15px;
+            font-size: 24px;
+            color: #333;
+        }
+        .filter-form label {
+            font-size: 16px;
+            margin-right: 10px;
+        }
+        .filter-form input[type="date"] {
+            padding: 8px;
+            font-size: 16px;
+            margin: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .filter-form button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .filter-form button:hover {
+            background-color: #45a049;
+        }
+        .container {
+            width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Bảng dữ liệu GPS theo thời gian</h1>
+
+        <div class="filter-form">
+            <form id="filter-form">
+                <label for="start-date">Start Date:</label>
+                <input type="datetime-local" id="start-date" name="start-date">
+                <label for="end-date" style="margin-left: 20px;">End Date:</label>
+                <input type="datetime-local" id="end-date" name="end-date" style="font-size: 18px;">
+                <button type="submit" id="refresh" style="margin-left: 20px;">Refresh</button>
+                <button type="button" id="delete" style="background-color: #ff0000; margin-left: 20px;">Delete</button>
+            </form>
+        </div>
+
+        <table id="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>GPS</th>
+                    <th>Vĩ độ</th>
+                    <th>Kinh Độ</th>
+                    <th>Timestamp</th>
+                    <th>Phone</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Dữ liệu sẽ được tải vào đây -->
+            </tbody>
+        </table>
+
+        <h1>Định tuyến đường đi</h1>
+        <div id="map"></div>
+    </div>
+
+    <!-- <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script> -->
+    <script>
+        let map;  // Declare the map variable globally
+        var locations_default = [];
+
+        function loadData(startDate, endDate) {
+            let url = '/home/filter';
+            if (startDate && endDate) {
+                url += `?start_date=${startDate}&end_date=${endDate}`;
+            }
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    const tableBody = document.querySelector("#data-table tbody");
+                    tableBody.innerHTML = "";  // Clear existing table data
+
+                    var locations = [];
+
+                    data.forEach(row => {
+                        const tr = document.createElement("tr");
+                        tr.innerHTML = `
+                            <td>${row[0]}</td>
+                            <td><a href="${row[1]}">${row[1]}</a></td>
+                            <td>${row[2]}</td>
+                            <td>${row[3]}</td>
+                            <td>${row[4]}</td>
+                            <td>${row[5]}</td>
+                        `;
+                        tableBody.appendChild(tr);
+
+                        // Add GPS coordinates to the locations array
+                        locations.push({ lat: row[2], lng: row[3], title: `Location ${row[0]}` });
+                    });
+
+                    if (JSON.stringify(locations) !== JSON.stringify(locations_default)) {
+                        locations_default = locations;
+                        updateMap(locations);  // Update map with new locations
+                    }
+                })
+                .catch(error => console.error('Error fetching data:', error));
+        }
+
+        function updateMap(locations) {
+            if (map) {
+                map.remove();  // Remove the existing map instance
+            }
+
+            // Create a new map instance
+            map = L.map('map').setView([10.8231, 106.6297], 12); // Default center
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+
+            const waypoints = locations.map(loc => L.latLng(loc.lat, loc.lng));
+
+            L.Routing.control({
+                waypoints: waypoints,
+                routeWhileDragging: true,
+                showAlternatives: false,
+                lineOptions: {
+                    styles: [
+                        { color: '#1E90FF', opacity: 0.8, weight: 6 },
+                    ],
+                },
+            }).addTo(map);
+        }
+
+        // Call loadData on page load
+        loadData();
+
+        // Refresh data every second
+        setInterval(() => {
+            const startDate = document.getElementById("start-date").value;
+            const endDate = document.getElementById("end-date").value;
+            loadData(startDate, endDate);
+        }, 1000);
+
+        document.getElementById("refresh").addEventListener("click", function() {
+            document.getElementById("start-date").value = "";
+            document.getElementById("end-date").value = "";
+            loadData();
+        });
+
+        document.getElementById("delete").addEventListener("click", function() {
+            const tableRows = document.querySelectorAll("#data-table tbody tr");
+            const idsToDelete = [];
+
+            tableRows.forEach(row => {
+                const id = row.cells[0].innerText;
+                idsToDelete.push(id);
+            });
+
+            if (idsToDelete.length > 0) {
+                fetch('/home/delete_all', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ ids: idsToDelete })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Deleted:', data);
+                    loadData();
+                })
+                .catch(error => console.error('Error deleting data:', error));
+            } else {
+                alert("No data to delete.");
+            }
+        });
+    </script>
+</body>
+</html>

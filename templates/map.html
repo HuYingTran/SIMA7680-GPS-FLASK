@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OpenStreetMap - Vẽ đường đi từ Mảng Dữ Liệu</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.css"
+  />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-routing-machine/3.2.12/leaflet-routing-machine.min.js"></script>
+  <style>
+    #map {
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <script>
+    // Tạo bản đồ
+    const map = L.map('map').setView([21.028511, 105.804817], 6); // Trung tâm Hà Nội
+
+    // Thêm lớp bản đồ OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
+
+    // Dữ liệu mảng tọa độ (Latitude, Longitude)
+    const data = [
+      { Latitude: 21.028511, Longitude: 105.804817 },  // Hà Nội
+      { Latitude: 21.030000, Longitude: 105.850000 },  // Điểm 1
+      { Latitude: 21.035000, Longitude: 105.890000 },  // Điểm 2
+      { Latitude: 21.040000, Longitude: 105.910000 },  // Điểm 3
+    ];
+
+    // Chuyển dữ liệu mảng thành các tọa độ latLng
+    const waypoints = data.map(row => L.latLng(row.Latitude, row.Longitude));
+
+    // Sử dụng Leaflet Routing Machine để vẽ đường đi
+    L.Routing.control({
+      waypoints: waypoints,
+      routeWhileDragging: true,
+      showAlternatives: false, // Không hiển thị tuyến đường thay thế
+      lineOptions: {
+        styles: [
+          { color: '#1E90FF', opacity: 0.8, weight: 6 }, // Đổi màu đường thành xanh dương (#1E90FF)
+        ],
+      },
+    }).addTo(map);
+  </script>
+</body>
+</html>
