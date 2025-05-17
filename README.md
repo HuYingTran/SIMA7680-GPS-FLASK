@@ -5,8 +5,8 @@
 
 ## 2. Server Flask(python)
 link: https://webgps.pythonanywhere.com/home
-User: admin
-Pass: 6666
+User: admin  
+Pass: 6666  
 
 ![Screenshot from 2025-05-17 16-54-26](https://github.com/user-attachments/assets/b7b0bb71-9d43-4b21-84ed-bd3765489f44)
 
